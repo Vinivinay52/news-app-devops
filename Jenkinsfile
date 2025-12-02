@@ -1,10 +1,49 @@
 pipeline {
+    agent none
+
+    stages {
+
+        stage('Build') {
+            agent { label 'Java' }
+            steps {
+                sh "mvn clean package"
+            }
+        }
+
+        stage('Test') {
+            agent { label 'Java' }
+            steps {
+                sh "mvn test"
+            }
+        }
+
+        stage('Versioning') {
+            agent { label 'Java' }
+            steps {
+                echo "version"
+            }
+        }
+
+        stage('Deploy') {
+            agent { label 'Java' }
+            steps {
+                sh """
+                /usr/bin/sudo cp /home/ubuntu/news-app-devops/target/news-app.war /opt/tomcat10/webapps/
+                """
+            }
+        }
+    }
+}
+
+Pradeep Kumar Reddy
+00:33
+pipeline {
     agent { label 'java' }
     stages {
         stage('News-App-Checkout') {
             steps {
                 sh 'rm -rf news-app-devops'
-                sh 'git clone https://github.com/Devopsdemo2025/news-app-devops.git'
+                sh 'https://github.com/pradeepreddy-hub/news-app-devops.git'
                 echo "git clone completed"
             }
         }
@@ -35,11 +74,46 @@ pipeline {
         }
         stage('Deploy') {
     steps {
-   sh "sudo scp /home/slave1/workspace/p_MultiBranch_Pipeline_feature-1/target/news-app.war  jenkins@13.233.20.29:/opt/apache-tomcat-11.0.14/webapps/" 
+   sh "sudo cp /home/ubuntu/news-app-devops/target/news-app.war /opt/tomcat10/webapps/"
       echo "build deployed"
     }
 }
-       
+        // 6.3: Push the artifacts to Jfrog repository
+stage('Push the artifacts into Jfrog Artifactory') {
+    steps {
+        script {
+            // Get the current date and time in the format: yyyy-MM-dd_HH-mm
+            def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
+
+            // Define the target path with the timestamp
+            def targetPath = "NewsApp/${currentDate}/"
+
+            // Configure the Artifactory server
+            rtServer(
+                id: 'Artifactory',
+                url: 'https://trialyth1ui.jfrog.io/artifactory',
+                credentialsId: 'jfrog-credentials-id'   // must match Jenkins credentials
+            )
+
+            // Upload the artifact to JFrog Artifactory with the timestamped path
+            rtUpload(
+                serverId: 'Artifactory',
+                spec: """
+                {
+                    "files": [
+                        {
+                            "pattern": "*.war",
+                            "target": "${targetPath}"
+                        }
+                    ]
+                }
+                """
+            )
+        }
+    }
+
+
+}
     }
     post {
     success {
