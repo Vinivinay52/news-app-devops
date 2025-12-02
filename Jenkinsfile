@@ -43,7 +43,7 @@ pipeline {
         stage('News-App-Checkout') {
             steps {
                 sh 'rm -rf news-app-devops'
-                sh 'https://github.com/Vinivinay52/news-app-devops.git'
+                sh 'git clone https://github.com/Vinivinay52/news-app-devops.git'
                 echo "git clone completed"
             }
         }
