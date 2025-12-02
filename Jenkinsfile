@@ -1,44 +1,6 @@
 pipeline {
-    agent none
-
-    stages {
-
-        stage('Build') {
-            agent { label 'java' }
-            steps {
-                sh "mvn clean package"
-            }
-        }
-
-        stage('Test') {
-            agent { label 'Java' }
-            steps {
-                sh "mvn test"
-            }
-        }
-
-        stage('Versioning') {
-            agent { label 'Java' }
-            steps {
-                echo "version"
-            }
-        }
-
-        stage('Deploy') {
-            agent { label 'Java' }
-            steps {
-                sh """
-                /usr/bin/sudo cp /home/ubuntu/news-app-devops/target/news-app.war /opt/tomcat10/webapps/
-                """
-            }
-        }
-    }
-}
-
-Vinay
-00:33
-pipeline {
     agent { label 'java' }
+
     stages {
         stage('News-App-Checkout') {
             steps {
@@ -47,78 +9,68 @@ pipeline {
                 echo "git clone completed"
             }
         }
+
         stage('Build') {
             steps {
                 sh 'mvn clean package'
             }
         }
+
         stage('Test') {
             steps {
                 sh 'mvn test'
             }
         }
+
         stage('Version-Build') {
             steps {
                 script {
-                    // Example: version = 1.0.<BUILD_NUMBER>
                     def version = "1.0.${env.BUILD_NUMBER}"
                     echo "Setting project version to ${version}"
-                    
-                    // Update pom.xml version
+
                     sh "mvn versions:set -DnewVersion=${version}"
-                    
-                    // Build with new version
                     sh "mvn clean package"
                 }
             }
         }
+
         stage('Deploy') {
-    steps {
-   sh "sudo cp /home/ubuntu/news-app-devops/target/news-app.war /opt/tomcat10/webapps/"
-      echo "build deployed"
-    }
-}
-        // 6.3: Push the artifacts to Jfrog repository
-stage('Push the artifacts into Jfrog Artifactory') {
-    steps {
-        script {
-            // Get the current date and time in the format: yyyy-MM-dd_HH-mm
-            def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
+            steps {
+                sh "sudo cp news-app-devops/target/news-app.war /opt/tomcat10/webapps/"
+                echo "build deployed"
+            }
+        }
 
-            // Define the target path with the timestamp
-            def targetPath = "NewsApp/${currentDate}/"
+        stage('Push the artifacts into Jfrog Artifactory') {
+            steps {
+                script {
+                    def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
+                    def targetPath = "NewsApp/${currentDate}/"
 
-            // Configure the Artifactory server
-            rtServer(
-                id: 'Artifactory',
-                url: 'https://trialyth1ui.jfrog.io/artifactory',
-                credentialsId: 'jfrog-credentials-id'   // must match Jenkins credentials
-            )
+                    rtServer(
+                        id: 'Artifactory',
+                        url: 'https://trialyth1ui.jfrog.io/artifactory',
+                        credentialsId: 'jfrog-credentials-id'
+                    )
 
-            // Upload the artifact to JFrog Artifactory with the timestamped path
-            rtUpload(
-                serverId: 'Artifactory',
-                spec: """
-                {
-                    "files": [
-                        {
-                            "pattern": "*.war",
-                            "target": "${targetPath}"
-                        }
-                    ]
+                    rtUpload(
+                        serverId: 'Artifactory',
+                        spec: """{
+                            "files": [{
+                                "pattern": "news-app-devops/target/*.war",
+                                "target": "${targetPath}"
+                            }]
+                        }"""
+                    )
                 }
-                """
-            )
+            }
         }
     }
 
-
-}
-    }
     post {
-    success {
-        archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+        success {
+            archiveArtifacts artifacts: 'news-app-devops/target/*.war', fingerprint: true
+        }
     }
 }
-    
-}
+
