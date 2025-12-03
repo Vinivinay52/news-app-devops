@@ -1,49 +1,26 @@
-
 pipeline {
     agent { label 'slave1' }
-    
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'feature-1', url: 'https://github.com/Vinivinay52/news-app-devops.git'
+                sh "rm -rf news-app-devops "
+                sh "git clone https://github.com/ManasaaMarigowda/news-app-devops"
             }
         }
+
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests=false'
+                sh "mvn clean package"
             }
         }
-        stage('Run Tests') {
+
+        stage('Deploy') {
             steps {
-                sh 'mvn test'
+                sh "sudo rm -rf /opt/tomcat10/webapps/news-app.war"
+                sh "sudo cp /home/ubuntu/news-app-devops/target/news-app.war /opt/tomcat10/webapps"
+          
             }
-        }
-
-        stage('Deploy WAR to Tomcat') {
-            steps {
-                sh '''
-                    TOMCAT_PATH="/opt/tomcat10/webapps"
-                    WAR_FILE="target/news-app.war"
-
-                    echo "Cleaning old deployment..."
-                    sudo rm -rf $TOMCAT_PATH/news-app $TOMCAT_PATH/news-app.war
-
-                    echo "Copying new WAR..."
-                    sudo cp $WAR_FILE $TOMCAT_PATH/
-
-                    echo "Restarting Tomcat..."
-                    pkill -f 'org.apache.catalina.startup.Bootstrap' || true
-                    nohup $TOMCAT_PATH/../bin/startup.sh &
-                '''
-            }
-        }
-    }
-    post {
-        success {
-            echo 'Build and deployment completed successfully!'
-        }
-        failure {
-            echo 'Build or deployment failed. Check logs for details.'
         }
     }
 }
+
