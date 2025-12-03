@@ -1,65 +1,85 @@
 pipeline {
-  agent { label 'slave3' }
-	environment {
-    JFROG_URL = 'https://yashusn.jfrog.io/artifactory'
-    REPO_NAME = 'news-app-libs-snapshot-local'      // JFrog repo for feature branches
-  }
-	
- stages {
-	 stage('Checkout') {
-      steps {
-        checkout scm
-      }
+    agent { label 'java' }
+    stages {
+        stage('News-App-Checkout') {
+            steps {
+                sh 'rm -rf news-app-devops'
+                sh 'git clone https://github.com/Vinivinay52/news-app-devops.git'
+                echo "git clone completed"
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+        stage('Version-Build') {
+            steps {
+                script {
+                    // Example: version = 1.0.<BUILD_NUMBER>
+                    def version = "1.0.${env.BUILD_NUMBER}"
+                    echo "Setting project version to ${version}"
+                    
+                    // Update pom.xml version
+                    sh "mvn versions:set -DnewVersion=${version}"
+                    
+                    // Build with new version
+                    sh "mvn clean package"
+                }
+            }
+        }
+        stage('Deploy') {
+    steps {
+   sh "sudo scp /home/slave1/workspace/news_vini_job1_feature-1/target/news-app.war  /opt/apache-tomcat-10.1.49/webapps/" 
+      echo "build deployed"
     }
-    stage('Test') {
-      steps {
-        sh 'mvn test'
-      }
-    }
-
-    stage('Build') {
-      steps {
-        sh 'mvn clean package'
-      }
-    }
-	 stage('Create Versioned Artifact') {
-      steps {
+}
+        // 6.3: Push the artifacts to Jfrog repository
+stage('Push the artifacts into Jfrog Artifactory') {
+    steps {
         script {
-          def sha = sh(
-            script: 'git rev-parse --short HEAD',
-            returnStdout: true
-          ).trim()
+            // Get the current date and time in the format: yyyy-MM-dd_HH-mm
+            def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
 
-          def branchSafe = env.BRANCH_NAME.replaceAll('[^a-zA-Z0-9_.-]', '_')
+            // Define the target path with the timestamp
+            def targetPath = "NewsApp/${currentDate}/"
 
-          env.ARTIFACT = "news-app-${branchSafe}-${env.BUILD_NUMBER}-${sha}.war"
+            // Configure the Artifactory server
+            rtServer(
+                id: 'Artifactory',
+                url: 'https://trialyth1ui.jfrog.io/artifactory',
+                credentialsId: 'jfrog-credentials-id'   // must match Jenkins credentials
+            )
 
-          sh "cp target/*.war ${env.ARTIFACT}"
-          archiveArtifacts artifacts: "${env.ARTIFACT}", fingerprint: true
+            // Upload the artifact to JFrog Artifactory with the timestamped path
+            rtUpload(
+                serverId: 'Artifactory',
+                spec: """
+                {
+                    "files": [
+                        {
+                            "pattern": "*.war",
+                            "target": "${targetPath}"
+                        }
+                    ]
+                }
+                """
+            )
         }
-      }
     }
 
-    stage('Upload to JFrog') {
-      steps {
-        withCredentials([string(credentialsId: 'JFROG_API_KEY', variable: 'JFROG_API_KEY')]) {
-          sh """
-            curl -f -H "X-JFrog-Art-Api: ${JFROG_API_KEY}" \
-                -T "${env.ARTIFACT}" \
-                "${JFROG_URL}/${REPO_NAME}/${env.BRANCH_NAME}/${env.ARTIFACT}"
-          """
-        }
-      }
+
+}
     }
-	 
-    stage('Deploy to Tomcat') {
-      steps {
-			sh "sudo rm -rf /opt/tomcat10/webapps/news-app"
-			//sudo rm /opt/tomcat10/webapps/news-app.war
-			sh "sudo cp /home/ubuntu/workspace/news-app-Job_feature-1/target/news-app.war /opt/tomcat10/webapps"
-		  		  	sh "sudo /opt/tomcat10/bin/shutdown.sh"
-			sh "sudo /opt/tomcat10/bin/startup.sh"
-        }
-      }
+    post {
+    success {
+        archiveArtifacts artifacts: 'target/*.war', fingerprint: true
     }
+}
+    
 }
