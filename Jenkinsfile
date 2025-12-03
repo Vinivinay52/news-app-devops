@@ -1,85 +1,20 @@
 pipeline {
-    agent { label 'java' }
+    agent { label 'slave1' }
     stages {
-        stage('News-App-Checkout') {
+        stage('Checkout') {
             steps {
-                sh 'rm -rf news-app-devops'
-                sh 'git clone https://github.com/Vinivinay52/news-app-devops.git'
-                echo "git clone completed"
+                sh "rm -rf news-app-devops "
+                sh "git clone https://github.com/ManasaaMarigowda/news-app-devops"
             }
         }
+
         stage('Build') {
             steps {
-                sh 'mvn clean package'
+                sh "mvn clean package"
             }
         }
-        stage('Test') {
-            steps {
-                sh 'mvn test'
-            }
-        }
-        stage('Version-Build') {
-            steps {
-                script {
-                    // Example: version = 1.0.<BUILD_NUMBER>
-                    def version = "1.0.${env.BUILD_NUMBER}"
-                    echo "Setting project version to ${version}"
-                    
-                    // Update pom.xml version
-                    sh "mvn versions:set -DnewVersion=${version}"
-                    
-                    // Build with new version
-                    sh "mvn clean package"
-                }
-            }
-        }
+
         stage('Deploy') {
-    steps {
-   sh "sudo scp /home/slave5/workspace/news_vini_job1_feature-1/target/news-app.war  /opt/apache-tomcat-10.1.49/webapps/" 
-      echo "build deployed"
-    }
-}
-        // 6.3: Push the artifacts to Jfrog repository
-stage('Push the artifacts into Jfrog Artifactory') {
-    steps {
-        script {
-            // Get the current date and time in the format: yyyy-MM-dd_HH-mm
-            def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
-
-            // Define the target path with the timestamp
-            def targetPath = "NewsApp/${currentDate}/"
-
-            // Configure the Artifactory server
-            rtServer(
-                id: 'Artifactory',
-                url: 'https://trialyth1ui.jfrog.io/artifactory',
-                credentialsId: 'jfrog-credentials-id'   // must match Jenkins credentials
-            )
-
-            // Upload the artifact to JFrog Artifactory with the timestamped path
-            rtUpload(
-                serverId: 'Artifactory',
-                spec: """
-                {
-                    "files": [
-                        {
-                            "pattern": "*.war",
-                            "target": "${targetPath}"
-                        }
-                    ]
-                }
-                """
-            )
-        }
-    }
-
-
-}
-    }
-    post {
-    success {
-        archiveArtifacts artifacts: 'target/*.war', fingerprint: true
-    }
-}
-    
-}
+            steps {
+                sh "sudo rm -rf /opt/tomcat10/webapps/news-app.war"
+                sh "sudo cp /home/ubuntu/workspace/news-app-devops_feature-1/target/news-app.war /opt/tomcat10/webapps"
