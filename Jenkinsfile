@@ -35,7 +35,7 @@ pipeline {
         }
         stage('Deploy') {
     steps {
-   sh "sudo scp /home/slave1/workspace/p_MultiBranch_Pipeline_feature-2/target/news-app.war  jenkins@13.233.20.29:/opt/apache-tomcat-11.0.14/webapps/" 
+   sh "sudo scp /home/slave1/workspace/news_vini_job1_feature-1/target/news-app.war  /opt/apache-tomcat-10.1.49/webapps/" 
       echo "build deployed"
     }
 }
