@@ -35,7 +35,7 @@ pipeline {
         }
         stage('Deploy') {
     steps {
-   sh "sudo scp /home/slave1/workspace/news_vini_job1_feature-1/target/news-app.war  /opt/apache-tomcat-10.1.49/webapps/" 
+   sh "sudo scp /home/slave5/workspace/news_vini_job1_feature-1/target/news-app.war  /opt/apache-tomcat-10.1.49/webapps/" 
       echo "build deployed"
     }
 }
