@@ -1,11 +1,11 @@
 
 pipeline {
-    agent { label 'slave2' }
+    agent { label 'slave5' }
     
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'feature-1', url: 'https://github.com/pradeepreddy-hub/news-app-devops.git'
+                git branch: 'feature-1', url: 'https://github.com/Vinivinay52/news-app-devops.git'
             }
         }
         stage('Build') {
