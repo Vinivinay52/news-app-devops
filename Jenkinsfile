@@ -1,10 +1,10 @@
 pipeline {
-    agent { label 'slave1' }
+    agent { label 'slave5' }
     stages {
         stage('Checkout') {
             steps {
                 sh "rm -rf news-app-devops "
-                sh "git clone https://github.com/ManasaaMarigowda/news-app-devops"
+                sh "git clone https://github.com/Vinivinay52/news-app-devops.git"
             }
         }
 
