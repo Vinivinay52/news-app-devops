@@ -35,7 +35,7 @@ pipeline {
 		sh "sudo /opt/tomcat10_9090/bin/startup.sh"
          }
 }
-}
+
 
        stage('Create Versioned Artifact') {
       steps {
@@ -68,4 +68,5 @@ pipeline {
     }
        
 		}
+}
 }
