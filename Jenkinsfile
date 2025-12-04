@@ -1,27 +1,43 @@
 pipeline {
-environment {
-    JFROG_URL = 'https://trialeysrup.jfrog.io/artifactory'
-    REPO_NAME = 'news_app-libs-snapshot'      // JFrog repo for feature branches
-	 
-  }
     agent { label 'slave20' }
+
+    environment {
+        TOMCAT_PATH = "/opt/tomcat10/webapps"
+        WAR_FILE = "target/news-app.war"
+		JFROG_URL = 'https://trialeysrup.jfrog.io/artifactory'
+    REPO_NAME = 'news_app-libs-snapshot'      // JFrog repo for feature branches
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                 sh "rm -rf news-app-devops"
-               sh "https://github.com/Vinivinay52/news-app-devops.git"
+                git branch: 'feature-2', url: 'https://github.com/Vinivinay52/news-app-devops.git'
             }
-        } 
+        }
+
         stage('Build') {
             steps {
-           sh '''
-		   sudo apt-get update
-		   sudo apt install -y maven
-				 mvn clean package
-				 '''
+                // This runs maven package (will run tests because -DskipTests=false)
+                sh 'mvn clean package -DskipTests=false'
             }
-        } 
-        
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+	}
+}
+
+
+
+
+
+
+
+
+
 		
     //    stage('Create Versioned Artifact') {
     //   steps {
@@ -61,6 +77,6 @@ environment {
 // 		sh "sudo /opt/tomcat10_9090/bin/startup.sh"
 //          }
 // }
- }
+// }
 
-}
+//}
