@@ -1,84 +1,65 @@
 pipeline {
-    agent { label 'slave20' }
-
-    environment {
-        TOMCAT_PATH = "/opt/tomcat10/webapps"
-        WAR_FILE = "target/news-app.war"
+  agent { label 'slave20' }
+	environment {
+    JFROG_URL = 'https://trialeysrup.jfrog.io/artifactory'
+    REPO_NAME = 'newsapp_release'      // JFrog repo for feature branches
+  }
+	
+ stages {
+	 stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+    stage('Test') {
+      steps {
+        sh 'mvn test'
+      }
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'feature-1', url: 'https://github.com/Vinivinay52/news-app-devops.git'
-            }
+    stage('Build') {
+      steps {
+        sh 'mvn clean package'
+      }
+    }
+	 stage('Create Versioned Artifact') {
+      steps {
+        script {
+          def sha = sh(
+            script: 'git rev-parse --short HEAD',
+            returnStdout: true
+          ).trim()
+
+          def branchSafe = env.BRANCH_NAME.replaceAll('[^a-zA-Z0-9_.-]', '_')
+
+          env.ARTIFACT = "news-app-${branchSafe}-${env.BUILD_NUMBER}-${sha}.war"
+
+          sh "cp target/*.war ${env.ARTIFACT}"
+          archiveArtifacts artifacts: "${env.ARTIFACT}", fingerprint: true
         }
-
-        stage('Build') {
-            steps {
-                sh 'mvn clean package -DskipTests=false'
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                sh 'mvn test'
-            }
-        }
-
-        stage('Deploy WAR to Tomcat') {
-            steps {
-                sh(script: '''
-                    echo "Using TOMCAT_PATH=${TOMCAT_PATH}"
-                    echo "WAR_FILE=${WAR_FILE}"
-
-                    if [ ! -f "${WAR_FILE}" ]; then
-                      echo "ERROR: WAR file ${WAR_FILE} not found"
-                      exit 1
-                    fi
-
-                    echo "Cleaning old deployment..."
-                    sudo rm -rf "${TOMCAT_PATH}/news-app" "${TOMCAT_PATH}/news-app.war" || true
-
-                    echo "Copying new WAR..."
-                    sudo cp "${WAR_FILE}" "${TOMCAT_PATH}/"
-
-                    echo "Restarting Tomcat..."
-                    pkill -f 'org.apache.catalina.startup.Bootstrap' || true
-                    nohup "${TOMCAT_PATH}/../bin/startup.sh" > /dev/null 2>&1 &
-                ''')
-            }
-        }
-
-        stage('Push the artifacts into JFrog Artifactory') {
-            steps {
-                script {
-                    def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
-                    def targetPath = "newsapp_release/${currentDate}/"
-
-                    rtUpload(
-                        serverId: "jfrog",
-                        spec: """{
-                            "files": [
-                                {
-                                    "pattern": "${WAR_FILE}",
-                                    "target": "${targetPath}"
-                                }
-                            ]
-                        }"""
-                    )
-
-                    rtPublishBuildInfo(serverId: "jfrog")
-                }
-            }
-        }
+      }
     }
 
-    post {
-        success {
-            echo 'Build and deployment completed successfully!'
+    stage('Upload to JFrog') {
+      steps {
+        withCredentials([string(credentialsId: 'JFROG_API_KEY', variable: 'JFROG_API_KEY')]) {
+          sh """
+            curl -f -H "X-JFrog-Art-Api: ${JFROG_API_KEY}" \
+                -T "${env.ARTIFACT}" \
+                "${JFROG_URL}/${REPO_NAME}/${env.BRANCH_NAME}/${env.ARTIFACT}"
+          """
         }
-        failure {
-            echo 'Build or deployment failed. Check logs for details.'
+      }
+    }
+	 
+    stage('Deploy to Tomcat') {
+      steps {
+			sh "sudo rm -rf /opt/tomcat10/webapps/news-app"
+			//sudo rm /opt/tomcat10/webapps/news-app.war
+			sh "sudo cp /home/ubuntu/news-app-devops/target/news-app.war /opt/tomcat10/webapps"
+		  		  	sh "sudo /opt/tomcat10/bin/shutdown.sh"
+			sh "sudo /opt/tomcat10/bin/startup.sh"
         }
+      }
     }
 }
