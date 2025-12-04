@@ -67,6 +67,7 @@ pipeline {
                         id: "jfrog",
                         url: "https://trialdoenfo.jfrog.io/artifactory",
                         credentialsId: "jfrog-creds"
+                        )
 
                     // Upload the built WAR to JFrog Artifactory with the timestamped path
                     rtUpload(
