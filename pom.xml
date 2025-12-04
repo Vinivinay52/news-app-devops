@@ -76,5 +76,29 @@
 
         </plugins>
     </build>
+<repositories>
+    <repository>
+        <id>jfrog-release</id>
+        <name>JFrog Artifactory - Release</name>
+        <url>https://trialdoenfo.jfrog.io/artifactory/newsapp_release/</url>
+        <releases>
+            <enabled>true</enabled>
+        </releases>
+        <snapshots>
+            <enabled>false</enabled>
+        </snapshots>
+    </repository>
 
+    <repository>
+        <id>jfrog-snapshot</id>
+        <name>JFrog Artifactory - Snapshot</name>
+        <url>https://trialdoenfo.jfrog.io/artifactory/newsapp_release/</url>
+        <releases>
+            <enabled>false</enabled>
+        </releases>
+        <snapshots>
+            <enabled>true</enabled>
+        </snapshots>
+    </repository>
+</repositories>
 </project>
