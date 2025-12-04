@@ -4,7 +4,7 @@ environment {
     REPO_NAME = 'news_app-libs-snapshot'      // JFrog repo for feature branches
 	 
   }
-    agent { label 'slave1' }
+    agent { label 'slave20' }
     stages {
         stage('Checkout') {
             steps {
