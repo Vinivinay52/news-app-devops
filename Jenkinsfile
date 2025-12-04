@@ -76,4 +76,5 @@ stage('Push the artifacts into JFrog Artifactory') {
                 ''')
             }
         }
-
+}
+}
