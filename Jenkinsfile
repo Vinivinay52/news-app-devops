@@ -53,16 +53,18 @@ pipeline {
             }
         }
 
-        stage('Push the artifacts into JFrog Artifactory') {
+stage('Push the artifacts into JFrog Artifactory') {
             steps {
                 script {
-                    // Get the current date and time in the format: yyyy-MM-dd_HH-mm
+                    // Define WAR file path
+                    def WAR_FILE = "${env.WORKSPACE}/target/news-app.war"
+
+                    // Current timestamp
                     def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
 
-                    // Define the target path with the timestamp
+                    // Path inside Artifactory
                     def targetPath = "newsapp_snapshots/${currentDate}/"
 
-                    // Upload the built WAR to JFrog Artifactory with the timestamped path
                     rtUpload(
                         serverId: "jfrog",
                         spec: """{
@@ -77,7 +79,6 @@ pipeline {
                 }
             }
         }
-    } // end stages
 
     post {
         success {
