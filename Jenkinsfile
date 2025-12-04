@@ -5,7 +5,7 @@ pipeline {
         TOMCAT_PATH = "/opt/tomcat10/webapps"
         WAR_FILE = "target/news-app.war"
 		JFROG_URL = 'https://trialeysrup.jfrog.io/artifactory'
-    REPO_NAME = 'news_app-libs-snapshot'      // JFrog repo for feature branches
+    REPO_NAME = 'news_app-libs-snapshot'      // JFrog repo for feature branches.
     }
 
     stages {
