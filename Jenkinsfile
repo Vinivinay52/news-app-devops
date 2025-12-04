@@ -31,8 +31,8 @@ pipeline {
 		 stage('Deploy') {
     steps {
           
-        sh "sudo cp  /home/slave20/workspace/news-app-devops_job1_feature-1/target/news-app.war /opt/tomcat10_9090/webapps"
-		sh "sudo /opt/tomcat10_9090/bin/startup.sh"
+        sh "sudo cp  /home/slave20/workspace/news-app-devops_job1_feature-1/target/news-app.war /opt/tomcat10/webapps"
+	
          }
 }
 
