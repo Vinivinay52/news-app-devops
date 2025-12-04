@@ -64,7 +64,7 @@ stage('Push the artifacts into Jfrog Artifactory') {
             // Configure the Artifactory server
            rtServer(
                 id: 'jfrog',
-                url: 'https://trialdoenfo.jfrog.io/artifactory/newsapp_release/',
+                url: 'https://trialdoenfo.jfrog.io/artifactory',
                 credentialsId: 'Jfrog_jenkins_cred'   // must match Jenkins credentials
             )
 
