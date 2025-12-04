@@ -70,7 +70,7 @@ stage('Push the artifacts into Jfrog Artifactory') {
 
             // Upload the artifact to JFrog Artifactory with the timestamped path
             rtUpload(
-                serverId: 'Artifactory',
+                serverId: 'jfrog',
                 spec: """
                 {
                     "files": [
