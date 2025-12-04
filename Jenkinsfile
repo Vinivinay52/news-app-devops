@@ -61,7 +61,11 @@ pipeline {
 
                     // Define the target path with the timestamp
                     def targetPath = "newsapp_release/${currentDate}/"
-
+                    rtServer(
+                id: 'jfrog',
+                url: 'https://trialdoenfo.jfrog.io/artifactory/newsapp_release/',
+                credentialsId: 'Jfrog_jenkins_cred'   // must match Jenkins credentials
+            )
                     // Upload the built WAR to JFrog Artifactory with the timestamped path
                     rtUpload(
                         serverId: "jfrog",
