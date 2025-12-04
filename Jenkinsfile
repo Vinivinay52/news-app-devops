@@ -53,37 +53,27 @@ pipeline {
             }
         }
 
-        stage('Push the artifacts into JFrog Artifactory') {
-            steps {
-                script {
-                    // Get the current date and time in the format: yyyy-MM-dd_HH-mm
-                    def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
+      stage('Push the artifacts into JFrog Artifactory') {
+    steps {
+        script {
+            def server = Artifactory.server('jfrog')
+            server.credentialsId = 'vinivinay52@zohomail.in'  // update if different
 
-                    // Define the target path with the timestamp
-                    def targetPath = "newsapp_release/${currentDate}/"
-
-                     // Configure Artifactory server connection
-                    rtServer(
-                        id: "jfrog",
-                        url: "https://trialdoenfo.jfrog.io/artifactory",
-                        credentialsId: "jfrog-creds"
-                        )
-
-                    // Upload the built WAR to JFrog Artifactory with the timestamped path
-                    rtUpload(
-                        serverId: "jfrog",
-                        spec: """{
-                            "files": [
-                                {
-                                    "pattern": "${WAR_FILE}",
-                                    "target": "${targetPath}"
-                                }
-                            ]
-                        }"""
-                    )
+            def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
+            def uploadSpec = """{
+              "files": [
+                {
+                  "pattern": "target/news-app.war",
+                  "target": "generic-local/newsapp_release/${currentDate}/"
                 }
-            }
+              ]
+            }"""
+
+            server.upload(spec: uploadSpec)
         }
+    }
+}
+
     } // end stages
 
     post {
