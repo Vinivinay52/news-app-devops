@@ -85,7 +85,7 @@ stage('Push the artifacts into Jfrog Artifactory') {
             )
         }
     }
-}
+
     post {
         success {
             echo 'Build and deployment completed successfully!'
@@ -95,3 +95,4 @@ stage('Push the artifacts into Jfrog Artifactory') {
         }
     }
 }
+    }
