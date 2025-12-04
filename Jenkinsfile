@@ -52,7 +52,6 @@ pipeline {
                 ''')
             }
         }
-        repository
 stage('Push the artifacts into Jfrog Artifactory') {
     steps {
         script {
@@ -85,6 +84,8 @@ stage('Push the artifacts into Jfrog Artifactory') {
             )
         }
     }
+}
+    }
 
     post {
         success {
@@ -95,4 +96,4 @@ stage('Push the artifacts into Jfrog Artifactory') {
         }
     }
 }
-    }
+    
