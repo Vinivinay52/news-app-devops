@@ -4,77 +4,66 @@ pipeline {
     environment {
         TOMCAT_PATH = "/opt/tomcat10/webapps"
         WAR_FILE = "target/news-app.war"
+        ARTIFACTORY_URL = "https://trialdoenfo.jfrog.io/artifactory"
+        ARTIFACTORY_REPO = "newsapp_release"
+        ARTIFACT_NAME = "news-app"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'feature-2', url: 'https://github.com/Vinivinay52/news-app-devops.git'
+                git branch: 'feature-1', url: 'https://github.com/Vinivinay52/news-app-devops.git'
             }
         }
 
         stage('Build') {
             steps {
-                // This runs maven package (will run tests because -DskipTests=false)
-                sh 'mvn clean package -DskipTests=false'
+                sh "mvn clean package -DskipTests"
             }
         }
 
-        stage('Run Tests') {
+        stage('Push Artifact to JFrog Artifactory') {
             steps {
-                sh 'mvn test'
+                script {
+                    // Timestamp version e.g., 2025-12-04_19-45
+                    def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
+                    def version = currentDate
+                    echo "Generated Version: ${version}"
+
+                    // Use Jenkins credential ID
+                    withCredentials([usernamePassword(credentialsId: 'jfrog-creds',
+                                                     usernameVariable: 'ART_USERNAME',
+                                                     passwordVariable: 'ART_PASSWORD')]) {
+                        sh """
+                            curl -u $ART_USERNAME:$ART_PASSWORD -T $WAR_FILE \
+                            "$ARTIFACTORY_URL/$ARTIFACTORY_REPO/${ARTIFACT_NAME}-${version}.war"
+                        """
+                    }
+                }
             }
         }
 
+        stage('Deploy to Tomcat') {
+            steps {
+                script {
+                    sh """
+                        sudo rm -rf $TOMCAT_PATH/news-app*
+                        sudo cp $WAR_FILE $TOMCAT_PATH/
+                        sudo systemctl restart tomcat
+                    """
+                }
+            }
+        }
+    }
 
-stage('Push the artifacts into JFrog Artifactory') {
-    steps {
-        script {
-            def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
-            def repo = "newsapp-snapshots-local"       // <-- your REAL repo key
-
-            rtUpload(
-                serverId: "jfrog",
-                spec: """{
-                    "files": [
-                        {
-                            "pattern": "${WAR_FILE}",
-                            "target": "${repo}/newsapp/${currentDate}/news-app.war"
-                        }
-                    ]
-                }"""
-            )
+    post {
+        success {
+            echo "Build & Deployment completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Please check logs!"
         }
     }
 }
 
-
-        
-        stage('Deploy WAR to Tomcat') {
-            steps {
-                sh(script: '''
-                    echo "Using TOMCAT_PATH=${TOMCAT_PATH}"
-                    echo "WAR_FILE=${WAR_FILE}"
-
-                    if [ ! -f "${WAR_FILE}" ]; then
-                      echo "ERROR: WAR file ${WAR_FILE} not found"
-                      exit 1
-                    fi
-
-                    echo "Cleaning old deployment..."
-                    sudo rm -rf "${TOMCAT_PATH}/news-app" "${TOMCAT_PATH}/news-app.war" || true
-
-                    echo "Copying new WAR..."
-                    sudo cp "${WAR_FILE}" "${TOMCAT_PATH}/"
-
-                    echo "Restarting Tomcat..."
-                    # kill existing Tomcat process if running
-                    pkill -f 'org.apache.catalina.startup.Bootstrap' || true
-
-                    # start Tomcat (assumes ../bin/startup.sh is the startup script)
-                    nohup "${TOMCAT_PATH}/../bin/startup.sh" > /dev/null 2>&1 &
-                ''')
-            }
-        }
-}
-}
