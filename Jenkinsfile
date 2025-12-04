@@ -26,6 +26,30 @@ pipeline {
             }
         }
 
+
+stage('Push the artifacts into JFrog Artifactory') {
+    steps {
+        script {
+            def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
+            def repo = "newsapp-snapshots-local"       // <-- your REAL repo key
+
+            rtUpload(
+                serverId: "jfrog",
+                spec: """{
+                    "files": [
+                        {
+                            "pattern": "${WAR_FILE}",
+                            "target": "${repo}/newsapp/${currentDate}/news-app.war"
+                        }
+                    ]
+                }"""
+            )
+        }
+    }
+}
+
+
+        
         stage('Deploy WAR to Tomcat') {
             steps {
                 sh(script: '''
@@ -53,39 +77,3 @@ pipeline {
             }
         }
 
-stage('Push the artifacts into JFrog Artifactory') {
-            steps {
-                script {
-                    // Define WAR file path
-                    def WAR_FILE = "${env.WORKSPACE}/target/news-app.war"
-
-                    // Current timestamp
-                    def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
-
-                    // Path inside Artifactory
-                    def targetPath = "newsapp_snapshots/${currentDate}/"
-
-                    rtUpload(
-                        serverId: "jfrog",
-                        spec: """{
-                            "files": [
-                                {
-                                    "pattern": "${WAR_FILE}",
-                                    "target": "${targetPath}"
-                                }
-                            ]
-                        }"""
-                    )
-                }
-            }
-        }
-
-    post {
-        success {
-            echo 'Build and deployment completed successfully!'
-        }
-        failure {
-            echo 'Build or deployment failed. Check logs for details.'
-        }
-    }
-}
