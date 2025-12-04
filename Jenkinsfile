@@ -51,31 +51,30 @@ pipeline {
         }
 
         stage('Push the artifacts into JFrog Artifactory') {
-            steps {
-                script {
-                    def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
-                    def targetPath = "newsapp_release/${currentDate}/"
+    steps {
+        script {
+            def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
+            def targetPath = "newsapp_release/${currentDate}/"
 
-                    def server = Artifactory.server("jfrog")
-                    server.getArtifactoryVersion() // validate connection
+            def server = Artifactory.server("jfrog")
 
-                    rtUpload(
-                        serverId: "jfrog",
-                        spec: """{
-                            "files": [
-                                {
-                                    "pattern": "${WAR_FILE}",
-                                    "target": "${targetPath}"
-                                }
-                            ]
-                        }"""
-                    )
+            rtUpload(
+                serverId: "jfrog",
+                spec: """{
+                    "files": [
+                        {
+                            "pattern": "${WAR_FILE}",
+                            "target": "${targetPath}"
+                        }
+                    ]
+                }"""
+            )
 
-                    rtPublishBuildInfo(serverId: "jfrog")
-                }
-            }
+            rtPublishBuildInfo(serverId: "jfrog")
         }
-    } // END stages
+    }
+}
+
 
     post {
         success {
