@@ -52,31 +52,26 @@ pipeline {
                 ''')
             }
         }
+
 stage('Push the artifacts into Jfrog Artifactory') {
     steps {
         script {
-            // Get the current date and time in the format: yyyy-MM-dd_HH-mm
             def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
-
-            // Define the target path with the timestamp
-            def targetPath = "NewsApp/${currentDate}/"
-
-            // Configure the Artifactory server
-           rtServer(
+            
+            rtServer(
                 id: 'jfrog',
                 url: 'https://trialdoenfo.jfrog.io/artifactory',
-                credentialsId: 'Jfrog_jenkins_cred'   // must match Jenkins credentials
+                credentialsId: 'Jfrog_jenkins_cred'
             )
 
-            // Upload the artifact to JFrog Artifactory with the timestamped path
             rtUpload(
                 serverId: 'jfrog',
                 spec: """
                 {
                     "files": [
                         {
-                            "pattern": "*.war",
-                            "target": "${targetPath}"
+                            "pattern": "target/*.war",
+                            "target": "newsapp_release/NewsApp/${currentDate}/"
                         }
                     ]
                 }
@@ -85,7 +80,6 @@ stage('Push the artifacts into Jfrog Artifactory') {
         }
     }
 }
-    }
 
     post {
         success {
