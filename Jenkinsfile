@@ -52,36 +52,39 @@ pipeline {
                 ''')
             }
         }
+        repository
+stage('Push the artifacts into Jfrog Artifactory') {
+    steps {
+        script {
+            // Get the current date and time in the format: yyyy-MM-dd_HH-mm
+            def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
 
-        stage('Push the artifacts into JFrog Artifactory') {
-            steps {
-                script {
-                    // Get the current date and time in the format: yyyy-MM-dd_HH-mm
-                    def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
+            // Define the target path with the timestamp
+            def targetPath = "NewsApp/${currentDate}/"
 
-                    // Define the target path with the timestamp
-                    def targetPath = "newsapp_release/${currentDate}/"
-                    rtServer(
+            // Configure the Artifactory server
+           rtServer(
                 id: 'jfrog',
                 url: 'https://trialdoenfo.jfrog.io/artifactory/newsapp_release/',
                 credentialsId: 'Jfrog_jenkins_cred'   // must match Jenkins credentials
             )
-                    // Upload the built WAR to JFrog Artifactory with the timestamped path
-                    rtUpload(
-                        serverId: "jfrog",
-                        spec: """{
-                            "files": [
-                                {
-                                    "pattern": "${WAR_FILE}",
-                                    "target": "${targetPath}"
-                                }
-                            ]
-                        }"""
-                    )
+
+            // Upload the artifact to JFrog Artifactory with the timestamped path
+            rtUpload(
+                serverId: 'Artifactory',
+                spec: """
+                {
+                    "files": [
+                        {
+                            "pattern": "*.war",
+                            "target": "${targetPath}"
+                        }
+                    ]
                 }
-            }
+                """
+            )
         }
-    } // end stages
+    }
 
     post {
         success {
