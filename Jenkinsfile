@@ -57,7 +57,7 @@ pipeline {
                     def targetPath = "newsapp_release/${currentDate}/"
 
                     def server = Artifactory.server("jfrog")
-                    server.getArtifactoryVersion()
+                    server.getArtifactoryVersion() // validate connection
 
                     rtUpload(
                         serverId: "jfrog",
@@ -78,4 +78,11 @@ pipeline {
     } // END stages
 
     post {
-        succ
+        success {
+            echo 'Build and deployment completed successfully!'
+        }
+        failure {
+            echo 'Build or deployment failed. Check logs for details.'
+        }
+    }
+} // END pipeline
