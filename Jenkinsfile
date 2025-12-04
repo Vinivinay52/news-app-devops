@@ -7,7 +7,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 git branch: 'feature-1', url: 'https://github.com/Vinivinay52/news-app-devops.git'
@@ -51,30 +50,28 @@ pipeline {
         }
 
         stage('Push the artifacts into JFrog Artifactory') {
-    steps {
-        script {
-            def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
-            def targetPath = "newsapp_release/${currentDate}/"
+            steps {
+                script {
+                    def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
+                    def targetPath = "newsapp_release/${currentDate}/"
 
-            def server = Artifactory.server("jfrog")
+                    rtUpload(
+                        serverId: "jfrog",
+                        spec: """{
+                            "files": [
+                                {
+                                    "pattern": "${WAR_FILE}",
+                                    "target": "${targetPath}"
+                                }
+                            ]
+                        }"""
+                    )
 
-            rtUpload(
-                serverId: "jfrog",
-                spec: """{
-                    "files": [
-                        {
-                            "pattern": "${WAR_FILE}",
-                            "target": "${targetPath}"
-                        }
-                    ]
-                }"""
-            )
-
-            rtPublishBuildInfo(serverId: "jfrog")
+                    rtPublishBuildInfo(serverId: "jfrog")
+                }
+            }
         }
     }
-}
-
 
     post {
         success {
@@ -84,4 +81,4 @@ pipeline {
             echo 'Build or deployment failed. Check logs for details.'
         }
     }
-} // END pipeline
+}
