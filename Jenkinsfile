@@ -35,8 +35,11 @@ pipeline {
             steps {
                 script {
                     // Define WAR file path
-                    def WAR_FILE = "${env.WORKSPACE}/target/news-app.war"
+                    //def WAR_FILE = "${env.WORKSPACE}/target/news-app.war"
+                        
 
+                    def WAR_FILE = "/home/slave20/workspace/news-app-devops_job1_feature-1/target/news-app.war"
+                    
                     // Current timestamp
                     def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
 
