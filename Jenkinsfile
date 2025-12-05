@@ -1,72 +1,79 @@
 pipeline {
     agent { label 'slave20' }
 
-    environment {
-        TOMCAT_PATH = "/opt/tomcat10/webapps"
-        WAR_FILE = "target/news-app.war"
-		JFROG_URL = 'https://trialeysrup.jfrog.io/artifactory'
-    REPO_NAME = 'news_app-libs-snapshot'      // JFrog repo for feature branches.
-    }
-
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'feature-2', url: 'https://github.com/Vinivinay52/news-app-devops.git'
+                sh "rm -rf news-app-devops"
+                sh "git clone 'https://github.com/Vinivinay52/news-app-devops.git'"
             }
         }
 
-        stage('Build') {
+        stage('Version & Build') {
             steps {
-                // This runs maven package (will run tests because -DskipTests=false)
-                sh 'mvn clean package -DskipTests=false'
+                script {
+                    def version = "1.0.${env.BUILD_NUMBER}"
+                    echo "Setting project version to ${version}"
+
+                    sh """
+                        cd ${env.WORKSPACE}
+                        mvn versions:set -DnewVersion=${version}
+                        mvn clean package
+                    """
+                }
             }
         }
 
-        stage('Run Tests') {
+        stage('Test') {
             steps {
-                sh 'mvn test'
+                sh "cd ${env.WORKSPACE} && mvn test"
             }
         }
 
-		 stage('Deploy') {
-    steps {
-          
-        sh "sudo cp  /home/slave20/workspace/news-app-devops_job1_feature-1/target/news-app.war /opt/tomcat10/webapps"
-	
-         }
-}
+        stage('Push the artifacts into JFrog Artifactory') {
+            steps {
+                script {
+                    // Define WAR file path
+                    def WAR_FILE = "${env.WORKSPACE}/target/news-app.war"
 
+                    // Current timestamp
+                    def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
 
-       stage('Create Versioned Artifact') {
-      steps {
-        script {
-          def sha = sh(
-            script: 'git rev-parse --short HEAD',
-            returnStdout: true
-          ).trim()
+                    // Path inside Artifactory
+                    def targetPath = "news_app1/${currentDate}/"
 
-          def branchSafe = env.BRANCH_NAME.replaceAll('[^a-zA-Z0-9_.-]', '_')
-
-          env.ARTIFACT = "bus_booking-${branchSafe}-${env.BUILD_NUMBER}-${sha}.war"
-        
-          sh "cp /home/slave20/workspace/news-app-devops_job1_feature-1/target/news-app.war ${env.ARTIFACT}"
-          archiveArtifacts artifacts: "${env.ARTIFACT}", fingerprint: true
+                    rtUpload(
+                        serverId: "jfrog",
+                        spec: """{
+                            "files": [
+                                {
+                                    "pattern": "${WAR_FILE}",
+                                    "target": "${targetPath}"
+                                }
+                            ]
+                        }"""
+                    )
+                }
+            }
         }
-      }
-    }
 
-    stage('Upload to JFrog') {
-      steps {
-        withCredentials([string(credentialsId: 'JFROG_API_KEY', variable: 'JFROG_API_KEY_A')]) {
-          sh """
-            curl -f -H "X-JFrog-Art-Api: ${JFROG_API_KEY_A}" \
-                -T "${env.ARTIFACT}" \
-                "${JFROG_URL}/${REPO_NAME}/${env.BRANCH_NAME}/${env.ARTIFACT}"
-          """
-    
-      }
-    }
-       
-		}
-}
+        stage('Deploy to Tomcat') {
+            steps {
+                sh """
+                    echo 'Cleaning old deployment'
+                    sudo rm -rf /opt/tomcat10/webapps/news-app /opt/tomcat10/webapps/news-app*.war
+
+                    echo 'Copying new WAR'
+                    sudo cp ${env.WORKSPACE}/target/news-app.war /opt/tomcat10/webapps/
+
+                    echo 'Restarting Tomcat'
+                    sudo /opt/tomcat10/bin/shutdown.sh || true
+                    sleep 2
+                    sudo /opt/tomcat10/bin/startup.sh
+                """
+            }
+        }
+
+    } // end stages
 }
