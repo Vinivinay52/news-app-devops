@@ -47,23 +47,29 @@ pipeline {
             }
         }
 
-        stage('Upload Artifact to JFrog') {
-            steps {
-                script {
-                    def server = Artifactory.server ARTIFACTORY_SERVER
-                    def uploadSpec = """{
-                        "files": [
-                            {
-                                "pattern": "target/news-app.war",
-                                "target": "${REPO_KEY}/news-app-${env.BUILD_NUMBER}.war"
-                            }
-                        ]
-                    }"""
+  stage('Upload Artifact to JFrog') {
+    steps {
+        script {
+            def server = Artifactory.server('artifactory-cred')
+            def buildInfo = Artifactory.newBuildInfo()
 
-                    server.upload spec: uploadSpec
-                }
-            }
+            server.upload(
+                spec: """{
+                    "files": [
+                        {
+                            "pattern": "target/*.war",
+                            "target": "newsapp-release/"
+                        }
+                    ]
+                }""",
+                buildInfo: buildInfo
+            )
+            
+            server.publishBuildInfo(buildInfo)
         }
+    }
+}
+
 
         stage('Deploy to Tomcat') {
             steps {
