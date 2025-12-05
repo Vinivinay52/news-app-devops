@@ -1,12 +1,18 @@
 pipeline {
-    agent { label 'java' }
+    agent { label 'slave20' }
+
+    environment {
+        TOMCAT_PATH = "/opt/tomcat10/webapps"
+        WAR_FILE = "target/news-app.war"
+        ARTIFACTORY_SERVER = "my-artifactory"
+        REPO_KEY = "newsapp-release"
+    }
 
     stages {
 
         stage('Checkout') {
             steps {
-                sh "rm -rf news-app-devops"
-                sh "git clone 'https://github.com/Vinivinay52/news-app-devops.git'"
+                git branch: 'feature-1', url: 'https://github.com/Vinivinay52/news-app-devops.git'
             }
         }
 
@@ -15,9 +21,7 @@ pipeline {
                 script {
                     def version = "1.0.${env.BUILD_NUMBER}"
                     echo "Setting project version to ${version}"
-
                     sh """
-                        cd ${env.WORKSPACE}
                         mvn versions:set -DnewVersion=${version}
                         mvn clean package
                     """
@@ -27,56 +31,45 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh "cd ${env.WORKSPACE} && mvn test"
+                sh "mvn test"
             }
         }
 
-        stage('Push the artifacts into JFrog Artifactory') {
+        stage('Artifactory Config') {
             steps {
                 script {
-                    // Define WAR file path
-                    //def WAR_FILE = "${env.WORKSPACE}/target/news-app.war"
-                        
-
-                    def WAR_FILE = "/home/slave20/workspace/news-app-devops_job1_feature-1/target/news-app.war"
-                    
-                    // Current timestamp
-                    def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
-
-                    // Path inside Artifactory
-                    def targetPath = "news_app1/${currentDate}/"
-
-                    rtUpload(
-                        serverId: "jfrog",
-                        spec: """{
-                            "files": [
-                                {
-                                    "pattern": "${WAR_FILE}",
-                                    "target": "${targetPath}"
-                                }
-                            ]
-                        }"""
+                    rtServer(
+                        id: ARTIFACTORY_SERVER,
+                        url: 'https://trialeysrup.jfrog.io/artifactory',
+                        credentialsId: 'jfrog-cred'
                     )
+                }
+            }
+        }
+
+        stage('Upload Artifact to JFrog') {
+            steps {
+                script {
+                    def server = Artifactory.server ARTIFACTORY_SERVER
+                    def uploadSpec = """{
+                        "files": [
+                            {
+                                "pattern": "target/news-app.war",
+                                "target": "${REPO_KEY}/news-app-${env.BUILD_NUMBER}.war"
+                            }
+                        ]
+                    }"""
+
+                    server.upload spec: uploadSpec
                 }
             }
         }
 
         stage('Deploy to Tomcat') {
             steps {
-                sh """
-                    echo 'Cleaning old deployment'
-                    sudo rm -rf /opt/tomcat10/webapps/news-app /opt/tomcat10/webapps/news-app*.war
-
-                    echo 'Copying new WAR'
-                    sudo cp ${env.WORKSPACE}/target/news-app.war /opt/tomcat10/webapps/
-
-                    echo 'Restarting Tomcat'
-                    sudo /opt/tomcat10/bin/shutdown.sh || true
-                    sleep 2
-                    sudo /opt/tomcat10/bin/startup.sh
-                """
+                sh "sudo rm -rf ${TOMCAT_PATH}/news-app.war"
+                sh "sudo cp ${WAR_FILE} ${TOMCAT_PATH}/"
             }
         }
-
-    } // end stages
+    }
 }
