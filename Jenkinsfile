@@ -1,66 +1,82 @@
 pipeline {
-environment {
-    JFROG_URL = 'https://trialeysrup.jfrog.io/artifactory'
-    REPO_NAME = 'news_app-libs-snapshot'      // JFrog repo for feature branches
-	 
-  }
-    agent { label 'slave20' }
+    agent { label 'java' }
+
     stages {
+
         stage('Checkout') {
             steps {
-                 sh "rm -rf news-app-devops"
-               sh "https://github.com/Vinivinay52/news-app-devops.git"
+                sh "rm -rf news-app-devops"
+                sh "git clone 'https://github.com/Vinivinay52/news-app-devops.git'"
             }
-        } 
-        stage('Build') {
+        }
+
+        stage('Version & Build') {
             steps {
-           sh '''
-		   sudo apt-get update
-		   sudo apt install -y maven
-				 mvn clean package
-				 '''
+                script {
+                    def version = "1.0.${env.BUILD_NUMBER}"
+                    echo "Setting project version to ${version}"
+
+                    sh """
+                        cd ${env.WORKSPACE}
+                        mvn versions:set -DnewVersion=${version}
+                        mvn clean package
+                    """
+                }
             }
-        } 
-        
-		
-    //    stage('Create Versioned Artifact') {
-    //   steps {
-    //     script {
-    //       def sha = sh(
-    //         script: 'git rev-parse --short HEAD',
-    //         returnStdout: true
-    //       ).trim()
+        }
 
-    //       def branchSafe = env.BRANCH_NAME.replaceAll('[^a-zA-Z0-9_.-]', '_')
+        stage('Test') {
+            steps {
+                sh "cd ${env.WORKSPACE} && mvn test"
+            }
+        }
 
-    //       env.ARTIFACT = "bus_booking-${branchSafe}-${env.BUILD_NUMBER}-${sha}.war"
-        
-    //       sh "cp /home/ubuntu/workspace/bus_booking_feature-1/target/bus-booking-app-1.0-SNAPSHOT.war ${env.ARTIFACT}"
-    //       archiveArtifacts artifacts: "${env.ARTIFACT}", fingerprint: true
-    //     }
-    //   }
-    // }
+        stage('Push the artifacts into JFrog Artifactory') {
+            steps {
+                script {
+                    // Define WAR file path
+                    //def WAR_FILE = "${env.WORKSPACE}/target/news-app.war"
+                        
 
-    // stage('Upload to JFrog') {
-    //   steps {
-    //     withCredentials([string(credentialsId: 'jfrogkey', variable: 'JFROG_API_KEY')]) {
-    //       sh """
-    //         curl -f -H "X-JFrog-Art-Api: ${JFROG_API_KEY}" \
-    //             -T "${env.ARTIFACT}" \
-    //             "${JFROG_URL}/${REPO_NAME}/${env.BRANCH_NAME}/${env.ARTIFACT}"
-    //       """
-    
-    //   }
-    // }
-       
-	//	}
-// 		 stage('Deploy') {
-//     steps {
-          
-//         sh "sudo cp  /home/ubuntu/workspace/bus_booking_feature-1/target/bus-booking-app-1.0-SNAPSHOT.war /opt/tomcat10_9090/webapps"
-// 		sh "sudo /opt/tomcat10_9090/bin/startup.sh"
-//          }
-// }
- }
+                    def WAR_FILE = "/home/slave20/workspace/news-app-devops_job1_feature-2/target/news-app.war"
+                    
+                    // Current timestamp
+                    def currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date())
 
+                    // Path inside Artifactory
+                    def targetPath = "news_app1/${currentDate}/"
+
+                    rtUpload(
+                        serverId: "jfrog",
+                        spec: """{
+                            "files": [
+                                {
+                                    "pattern": "${WAR_FILE}",
+                                    "target": "${targetPath}"
+                                }
+                            ]
+                        }"""
+                    )
+                }
+            }
+        }
+
+        stage('Deploy to Tomcat') {
+            steps {
+                sh """
+                    echo 'Cleaning old deployment'
+                    sudo rm -rf /opt/tomcat10/webapps/news-app /opt/tomcat10/webapps/news-app*.war
+
+                    echo 'Copying new WAR'
+                    sudo cp ${env.WORKSPACE}/target/news-app.war /opt/tomcat10/webapps/
+
+                    echo 'Restarting Tomcat'
+                    sudo /opt/tomcat10/bin/shutdown.sh || true
+                    sleep 2
+                    sudo /opt/tomcat10/bin/startup.sh
+                """
+            }
+        }
+
+    } // end stages
 }
