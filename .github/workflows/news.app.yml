@@ -73,7 +73,7 @@ jobs:
 
       - name: Status check
         run: |
-          curl -I http://localhost:8080/news-app/ || true
+          curl -I http://13.127.109.217:8080/news-app/ || true
 
       - name: Verify app content
         run: |
