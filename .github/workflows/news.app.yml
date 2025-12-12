@@ -1,4 +1,9 @@
 name: news_app
+
+permissions:
+  id-token: write
+  contents: read
+
 on:
   push:
     branches: [ feature-1 ]
@@ -8,9 +13,30 @@ jobs:
   build-deploy:
     runs-on: self-hosted
 
+    env:
+      ARTIFACTORY_REPO: ${{ secrets.ARTIFACTORY_REPO }}    
+      ARTIFACTORY_PATH: news-app                           
+      JF_SERVER_ID: setup-jfrog-ci                        
+
+
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
+      # Setup JFrog CLI and authenticate using OIDC to JFrog
+      - name: Setup JFrog CLI (OIDC)
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ secrets.JF_URL }}                   # e.g. https://trialp900s0.jfrog.io
+        with:
+          oidc-provider-name: 'setup-jfog-ci'        # << REPLACE with the exact Provider Name in JFrog
+          # oidc-audience: 'your-audience-if-needed'      # optional: uncomment if JFrog requested a specific audience
+
+      - name: Verify JFrog CLI (basic)
+        run: |
+          jf --version || true
+
+
 
       - name: Check & Install Java 17
         run: |
@@ -55,6 +81,20 @@ jobs:
         run: |
           mvn clean package -DskipTests
 
+      - name: Upload WAR TO Artifactory
+        run: |
+          ART_NAME="news-app-${{ github.run_number }}.war"
+          echo "Uploading target/news-app.war -> $ARTIFACTORY_REPO/$ARTIFACTORY_PATH/$ART_NAME"
+          jf rt u "target/news-app.war" "${ARTIFACTORY_REPO}/${ARTIFACTORY_PATH}/${ART_NAME}" --flat=true
+          echo "Uploaded as: ${ARTIFACTORY_REPO}/${ARTIFACTORY_PATH}/${ART_NAME}"
+        env:
+          # ensure JF_URL is present for jf; setup action already configured the server with access token
+          JF_URL: ${{ secrets.JF_URL }}
+
+
+
+
+          
       - name: Deploy WAR to Tomcat
         run: |
           echo "Stopping Tomcat"
@@ -71,13 +111,14 @@ jobs:
           sudo /opt/tomcat10/bin/startup.sh
           sleep 15
 
+
       - name: Status check
         run: |
-          curl -I http://13.233.136.114:8080/news-app/ || true
+          curl -I http://13.126.144.195:8080/news-app/ || true
 
       - name: Verify app content
         run: |
-          RESPONSE=$(curl -s http://13.233.136.114:8080/news-app/)
+          RESPONSE=$(curl -s http://13.126.144.195:8080/news-app/)
           echo "$RESPONSE" | grep "Welcome to news App" || true
           echo "$RESPONSE" | grep "Live News Categories" || true
           echo "$RESPONSE" | grep "Top Headlines" || true
