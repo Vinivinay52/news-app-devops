@@ -15,7 +15,7 @@ jobs:
 
     env:
       ARTIFACTORY_REPO: ${{ secrets.ARTIFACTORY_REPO }}    
-      ARTIFACTORY_PATH: news-app1                          
+      ARTIFACTORY_PATH: news-app                          
       JF_SERVER_ID: setup-jfrog-ci                        
 
 
