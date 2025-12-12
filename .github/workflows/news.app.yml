@@ -15,8 +15,8 @@ jobs:
 
     env:
       ARTIFACTORY_REPO: ${{ secrets.ARTIFACTORY_REPO }}    
-      ARTIFACTORY_PATH: news-app                           
-      JF_SERVER_ID: setup-jfrog-ci                        
+      ARTIFACTORY_PATH: news-app1                          
+      JF_SERVER_ID: vinay                        
 
 
     steps:
@@ -29,7 +29,7 @@ jobs:
         env:
           JF_URL: ${{ secrets.JF_URL }}                   # e.g. https://trialp900s0.jfrog.io
         with:
-          oidc-provider-name: 'setup-jfog-ci'        # << REPLACE with the exact Provider Name in JFrog
+          oidc-provider-name: 'vinay'        # << REPLACE with the exact Provider Name in JFrog
           # oidc-audience: 'your-audience-if-needed'      # optional: uncomment if JFrog requested a specific audience
 
       - name: Verify JFrog CLI (basic)
